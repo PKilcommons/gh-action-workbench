@@ -1,0 +1,36 @@
+name: Autocommit
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+# Dependabot doesn't support PDM lock files https://github.com/pdm-project/pdm/issues/978
+# As such, we want to amend the commit
+  autocommit-something:
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.ref }}
+    - name: Update file
+      run: echo "print('Henlo')" > some_file.py
+    - name: Commit file
+      uses: EndBug/add-and-commit@v9
+      with:
+        message: 'Automatic commit created on PR'
+        default_author: user_info
+        pathspec_error_handling: exitImmediately
+        add: 'some_file.py'
+
+  print-file:
+    if: always()
+    runs-on: ubuntu-latest
+    needs: autocommit-something
+    steps:
+      - uses: actions/checkout@v3
+        if: ${{ needs.autocommit-something.result != 'skipped' }}
+        with:
+          ref: ${{ needs.autocommit-something.outputs.commit_sha }}
+      - run: ls -la
