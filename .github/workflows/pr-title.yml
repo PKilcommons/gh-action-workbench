@@ -5,6 +5,7 @@ on:
     types:
       - opened
       - edited
+      - synchronize
     branches:
       - master
 
@@ -12,7 +13,19 @@ permissions:
   pull-requests: write
 
 jobs:
+  dupe-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          skip_after_successful_duplicate: 'true'
+
   main:
+    needs: dupe-check
+    if: needs.dupe-check.outputs.should_skip != 'true'
     name: Validate PR title
     runs-on: ubuntu-latest
     steps:

@@ -1,0 +1,50 @@
+on: pull_request
+
+env:
+  REGISTRY: ghcr.io
+  DO: true
+
+jobs:
+  dupe-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          skip_after_successful_duplicate: 'true'
+  meta:
+    needs: dupe-check
+    if: needs.dupe-check.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup PDM
+        uses: pdm-project/setup-pdm@v3
+        with:
+          python-version: 3.11
+          architecture: x64
+          prerelease: false
+          enable-pep582: true
+          cache: true
+          cache-dependency-path: './pdm.lock'
+
+      - name: Get Docker Metadata
+        if: env.DO == true
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.actor }}/foo
+          tags: type=ref,event=pr
+
+      - name: Install Dependencies
+        run: pdm install -v -G dev
+
+      - name: Run check
+        run: python get_env.py
+        env:
+          HIVO_CI_OCI_TAG: ${{ steps.meta.outputs.tags }}
+      - name: Run test
+        run: pdm run pytest -n auto test_env.py -rP

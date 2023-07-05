@@ -11,6 +11,8 @@ dev = [
     "black",
     "pytest",
     "maturin~=1.0",
+    "filelock>=3.12.2",
+    "pytest-xdist>=3.3.1",
 ]
 
 [tool.pytest.ini_options]
